@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.lokesh.ratelimiter</groupId>
+        <artifactId>d-rate-limiter-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>d-rate-limiter-spring-boot-starter</artifactId>
+    <name>d-rate-limiter-spring-boot-starter</name>
+    <description>Auto-configuration and AOP support for the Rate Limiter</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.lokesh.ratelimiter</groupId>
+            <artifactId>d-rate-limiter-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.lokesh.ratelimiter</groupId>
+            <artifactId>d-rate-limiter-redis</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aspectj</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+
+        <!-- Web dependency is needed to access HttpServletRequest for KeyResolvers -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+
+</project>
