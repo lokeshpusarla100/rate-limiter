@@ -2,14 +2,68 @@
 
 This document outlines the phased build process for the `d-rate-limiter` library, organized into Epics and Tasks.
 
-## 🚀 Epic 1: Project Skeleton & Core Domain
+## 🛠 Methodology: TDD-First
+As per **ADR 003**, we strictly follow the **Red-Green-Refactor** cycle:
+1.  **Red**: Write a failing test (or one that doesn't compile).
+2.  **Green**: Implement minimum code to pass.
+3.  **Refactor**: Clean up while maintaining green tests.
+
+## 📝 Critical Engineering Constraints
+*To be verified before every commit:*
+
+### 1. Hexagonal Integrity (ADR 001)
+- [ ] **Core Purity**: No dependencies on Spring, Redis, or Servlet API in `d-rate-limiter-core`.
+- [ ] **Port-Driven**: All IO or external logic must be defined via interfaces (Ports) in the Core.
+
+### 2. Resilience & Safety (ADR 002)
+- [ ] **Fail-Fast (Inputs)**: Config and entities must validate inputs at construction (e.g., non-negative capacity).
+- [ ] **Fail-Open (Runtime)**: Infrastructure failures (Redis down) must not block the user. Return `ALLOW` and log the error.
+- [ ] **Immutability**: Use Java `records` for domain entities to ensure thread safety.
+
+### 3. Multi-Tenancy & Performance (ADR 004/005)
+- [ ] **Plan-Based**: Decouple rules from code using the `PlanRegistry`.
+- [ ] **Identity Abstraction**: Use `RequestSource` and `KeyResolver` to avoid leaking HTTP into Core.
+- [ ] **Binary-First**: Use custom binary serialization for Redis storage (8-byte Double/Long) for performance.
+
+### 4. Logging & Observability
+- [ ] **Silent Core**: Core logic should not log to console directly; use SLF4J.
+- [ ] **Resilience Logging**: Log every "Fail-Open" event as an ERROR with stack trace.
+
+## 🚀 Epic 1: Project Skeleton & Core Domain [COMPLETED]
 **Goal**: Establish the multi-module structure and implement the "Pure Java" logic (The Hexagon).
 
-*   **1.1 Project Initialization**: Create root `pom.xml` and child module directories (`core`, `redis`, `starter`).
-*   **1.2 Domain Entities**: Define the `TokenBucket` state record and `RateLimitConfig`.
-*   **1.3 Outbound Ports**: Define the `RateLimiterRepository` interface (the "Port" to the infrastructure).
-*   **1.4 Core Logic (TDD)**: Implement the check/refill logic in Java (for the in-memory fallback/testing).
-*   **1.5 Verification**: 100% unit test coverage on the math logic.
+### 🏆 Completion Report: Epic 1
+
+#### 1. What was built?
+We have established the **Core Domain** of the library. This is the "Brain" that defines how rate limiting works without knowing about the outside world (Redis, Spring, HTTP).
+
+#### 2. Component Breakdown (The "How, Why, Where")
+
+| Component | Where? | What is it? | Why did we do it this way? (The Senior "Why") |
+| :--- | :--- | :--- | :--- |
+| **TokenBucket** | `core` | **State Entity** | Separates the *volatile state* (tokens, time) from the *fixed rules*. It is an immutable record for thread safety. |
+| **RateLimitConfig** | `core` | **Policy Entity** | Holds the *Rules* (Capacity, Rate). Validates inputs at startup (Fail-Fast) to prevent invalid config in production. |
+| **RateLimiter (Port)** | `core` | **Inbound Interface** | The main entry point. The Aspect will call this. It defines *What* the library does for the user. |
+| **RateLimiterRepository (Port)** | `core` | **Outbound Interface** | The "Socket." It defines *What* storage needs the Core has. It **is not** the implementation. |
+| **DefaultRateLimiter** | `core` | **Domain Service** | The "Orchestrator." It contains the **Fail-Open logic**. If storage crashes, it protects the user by allowing traffic. |
+| **RequestSource** | `core` | **Abstraction** | A "Translator." It allows the Core to ask for an IP or Header without needing to import heavy Web libraries. |
+
+#### 3. The "Pure Java" Flow (How a request moves)
+1.  **Request** enters the system via the **Adapter** (e.g., Spring AOP).
+2.  **Adapter** uses the `KeyResolver` and `PlanRegistry` (Ports) to gather identity and rules.
+3.  **Adapter** calls the `DefaultRateLimiter` (Service).
+4.  **Service** tells the `RateLimiterRepository` (Port): *"Try to acquire a token for this key."*
+5.  **Service** handles the result:
+    - If storage says "OK" -> Return `true`.
+    - If storage says "Exceeded" -> Return `false`.
+    - If storage **Crashes** (e.g., Redis down) -> Service catches it, logs an ERROR, and returns `true` (**Fail-Open**).
+
+#### 4. The Hexagonal Distinction
+- **Logic (Core)**: Knows *What* should happen (e.g., "If storage fails, allow request").
+- **Infrastructure (Redis/Starter)**: Knows *How* it happens (e.g., "Connect to Redis via Lettuce").
+By keeping the interface in the Core, we can test the entire "Fail-Open" logic without even having Redis installed.
+
+---
 
 ## 🚀 Epic 2: The Redis Adapter (The "Infra" Phase)
 **Goal**: Implement the distributed logic using Redis and Lua.

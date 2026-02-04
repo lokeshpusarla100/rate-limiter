@@ -21,10 +21,19 @@ We will separate **"Rules"** (The limits) from **"Binding"** (Where to apply the
 *   **Decision**: The "Limit" (Capacity/Rate) will be fetched inside the Lua script from a separate Redis Key, falling back to the static config if missing.
 *   **Benefit**: This allows **Hot Reloading** of limits. Ops can change the Redis key `config:plan:silver` to `10 req/sec`, and it applies instantly without restarting the app.
 
-### 3. Key Resolvers
-We will provide an interface `KeyResolver` to extract the target identity.
-*   **Default Implementation**: `IpKeyResolver`, `PrincipalKeyResolver`.
-*   **Customization**: Users can implement the interface to extract keys from JWTs, Cookies, or Custom Headers.
+### 3. Key Resolvers & Request Abstraction
+To adhere to **ADR 001 (Hexagonal Architecture)** and prevent "Web Logic" from leaking into the "Pure Java" core, we will introduce a strict abstraction layer.
+
+*   **Decision**: The Core module will **not** depend on `HttpServletRequest`.
+*   **Abstraction**: We will define a `RequestSource` interface in the Core.
+    *   This interface acts as a **Port**, providing generic access to headers, remote address, and principal.
+*   **Adapter**: The `d-rate-limiter-spring-boot-starter` will implement a `ServletRequestSourceAdapter` that wraps the actual `HttpServletRequest`.
+*   **KeyResolver**: The `KeyResolver` interface in the Core will rely solely on `RequestSource`.
+    *   Signature: `String resolve(RequestSource source)`.
+
+*   **Benefit**: 
+    *   **Testability**: Core tests can mock `RequestSource` without spinning up a mock web server.
+    *   **Portability**: The library can be easily adapted to non-Servlet environments (e.g., gRPC, CLI, Kafka consumers) by implementing a new Adapter.
 
 ### 4. Chained Limits
 *   **Decision**: The `@RateLimit` annotation will accept a *list* of plans.
