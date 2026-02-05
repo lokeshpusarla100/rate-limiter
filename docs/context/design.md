@@ -107,6 +107,41 @@ graph TD
     class User user;
 ```
 
+### 2.1.1 The Metaphor: Why a Hexagon?
+
+The "Hexagon" represents the **Domain Core** of the application. The reason we use a hexagon (and not a square or circle) is to emphasize that the application has **multiple sides** (Ports) that can be plugged into.
+
+```mermaid
+graph TD
+    subgraph "OUTSIDE (Adapters)"
+        A[Spring AOP Aspect]
+        B[REST Controller]
+        C[Redis Persistence]
+        D[Console Logger]
+        E[Unit Tests]
+        F[Hazelcast / Ignite]
+    end
+
+    subgraph "THE HEXAGON (The Core)"
+        Hex{{Application Core}}
+    end
+
+    A ---|Side 1| Hex
+    B ---|Side 2| Hex
+    Hex ---|Side 3| C
+    Hex ---|Side 4| D
+    E ---|Side 5| Hex
+    Hex ---|Side 6| F
+
+    style Hex fill:#e3f2fd,stroke:#1565c0,stroke-width:4px
+```
+
+*   **The Inside**: Contains **Zero** knowledge of the outside world. No Spring, No Redis, No SQL. Just the rules of the business (Token Bucket math).
+*   **The Sides (Ports)**: These are the interfaces. They define *what* the application needs to talk to the outside (e.g., "I need a way to save tokens").
+*   **The Plugs (Adapters)**: These are the implementations. They "adapt" a specific technology (like Redis) to fit the application's port.
+
+**Example**: If we want to switch from Redis to Hazelcast, we don't change the Hexagon. We just create a new "Plug" (Adapter) for the same "Side" (Port).
+
 ### 2.2 Key Architectural Components
 
 | Component | Layer | Responsibility |
