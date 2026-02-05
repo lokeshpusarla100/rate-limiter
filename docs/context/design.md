@@ -11,35 +11,114 @@
 *   **Format**: Custom Binary Serialization
 *   **Build**: Maven Multi-Module
 
-## 2. Component Architecture (Hexagonal)
+## 2. Architecture (Hexagonal / Ports & Adapters)
 
-### 2.1 Component Diagram (Static View)
+The system strictly adheres to the **Hexagonal Architecture**. This ensures that the core business logic (The "Domain") is completely isolated from external concerns like the Web Framework (Spring) or the Database (Redis).
+
+### 2.1 The Hexagon (Detailed View)
+
+This diagram illustrates the separation between the **Core Domain** (Blue), the **Ports** (Yellow), and the **Infrastructure Adapters** (Green).
+
 ```mermaid
-classDiagram
-    class UserApplication {
-        +Controller
-    }
-    class RateLimitStarter {
-        +RateLimitAspect
-        +AutoConfiguration
-    }
-    class CoreDomain {
-        <<Interface>>
-        +RateLimiter
-        +TokenBucket
-    }
-    class RedisAdapter {
-        +LettuceConnection
-        +LuaScript
-    }
+graph TD
+    subgraph "External World"
+        User[User / Client]
+        RedisDB[(Redis Cluster)]
+    end
 
-    UserApplication --> RateLimitStarter : Uses
-    RateLimitStarter --> CoreDomain : Configures
-    RateLimitStarter --> RedisAdapter : Wires
-    RedisAdapter ..|> CoreDomain : Implements
+    subgraph "Adapters (Infrastructure Layer)"
+        direction TB
+        subgraph "Driving Adapter (Spring Starter)"
+            Aspect[RateLimitAspect]
+            WebAdapter[ServletRequestAdapter]
+        end
+        subgraph "Driven Adapter (Redis Module)"
+            RedisRepo[RedisRateLimiterRepository]
+            Lua[Lua Script]
+        end
+    end
+
+    subgraph "d-rate-limiter-core (The Hexagon)"
+        direction TB
+        
+        subgraph "Inbound Ports (API)"
+            RateLimiterPort((RateLimiter))
+            RegistryPort((PlanRegistry))
+            KeyPort((KeyResolver))
+        end
+
+        subgraph "Domain Layer (Pure Java)"
+            Service[DefaultRateLimiter]
+            
+            subgraph "Entities"
+                Bucket[TokenBucket]
+                Config[RateLimitConfig]
+                Result[RateLimitResult]
+            end
+        end
+        
+        subgraph "Outbound Ports (SPI)"
+            RepoPort((RateLimiterRepository))
+            SourcePort((RequestSource))
+        end
+
+        subgraph "Support (Standard Impls)"
+            MemRegistry[InMemoryPlanRegistry]
+            HeaderKey[HeaderKeyResolver]
+        end
+    end
+
+    %% --- Relationships ---
+
+    %% Driving Flow
+    User -->|HTTP Request| Aspect
+    Aspect -->|1. Resolve Key| KeyPort
+    Aspect -->|2. Check Limit| RateLimiterPort
+    
+    %% Core Orchestration
+    Service -- implements --> RateLimiterPort
+    Service -->|3. Lookup Config| RegistryPort
+    Service -->|4. Atomic Check| RepoPort
+    
+    %% Data Flow
+    RepoPort -.->|Returns| Result
+    Service -.->|Returns| Result
+    
+    %% Driven Implementation
+    RedisRepo -- implements --> RepoPort
+    RedisRepo -->|5. EXEC| Lua
+    Lua -->|6. R/W| RedisDB
+
+    %% Support Wiring
+    MemRegistry -- implements --> RegistryPort
+    HeaderKey -- implements --> KeyPort
+    
+    %% Styling
+    classDef core fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
+    classDef port fill:#fff9c4,stroke:#fbc02d,stroke-width:2px;
+    classDef adapter fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef db fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px;
+    classDef user fill:#ffebee,stroke:#c62828,stroke-width:2px;
+
+    class Service,Bucket,Config,Result,MemRegistry,HeaderKey core;
+    class RateLimiterPort,RegistryPort,KeyPort,RepoPort,SourcePort port;
+    class Aspect,WebAdapter,RedisRepo,Lua adapter;
+    class RedisDB db;
+    class User user;
 ```
 
-### 2.2 Sequence Diagram (Request Lifecycle)
+### 2.2 Key Architectural Components
+
+| Component | Layer | Responsibility |
+| :--- | :--- | :--- |
+| **`RateLimiter` (Port)** | Core (Inbound) | The primary API. Defines *what* the system does (allow/deny). |
+| **`DefaultRateLimiter`** | Core (Service) | The "Brain". Orchestrates plan lookup, validation, and fail-open logic. |
+| **`TokenBucket`** | Core (Model) | The "Math". Defines the refill algorithm. Pure, immutable, and side-effect free. |
+| **`RateLimiterRepository`** | Core (Outbound) | The "Socket". Defines persistence needs. Does not know *how* data is stored. |
+| **`RedisRateLimiterRepository`** | Infra (Adapter) | The "Plug". Implements the repository using Redis and Lua. |
+| **`RateLimitAspect`** | Infra (Adapter) | The "Driver". Intercepts HTTP requests and drives the Core. |
+
+### 2.3 Detailed Request Flow (Sequence)
 ```mermaid
 sequenceDiagram
     participant U as User
