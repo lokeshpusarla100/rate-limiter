@@ -1,4 +1,4 @@
-package com.lokesh.ratelimiter.core;
+package com.lokesh.ratelimiter.core.model;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
@@ -12,25 +12,25 @@ class TokenBucketTest {
     void shouldRefillTokensBasedOnTimeAndConfig() {
         // GIVEN: A bucket with 5.0 tokens, last refilled at time 0
         TokenBucket bucket = new TokenBucket(5.0, 0L);
-        RateLimitConfig config = new RateLimitConfig(10, 1.0); // 1 token/sec
+        RateLimitConfig config = new RateLimitConfig("gold", 10, 1.0); // 1 token/sec
 
-        // WHEN: 1 second passes (1,000,000,000 nanos)
-        long now = 1_000_000_000L;
+        // WHEN: 1 second passes (1000 millis)
+        long now = 1000L;
         TokenBucket refilled = bucket.refill(now, config);
 
         // THEN: It should have 6.0 tokens
         assertEquals(6.0, refilled.tokens(), "Should have refilled 1 token in 1 second");
-        assertEquals(now, refilled.lastRefillNanos(), "Should update last refill timestamp");
+        assertEquals(now, refilled.lastRefillMillis(), "Should update last refill timestamp");
     }
 
     @Test
     void shouldNotExceedCapacityOnRefill() {
         // GIVEN: A bucket almost full (9.0), Capacity 10
         TokenBucket bucket = new TokenBucket(9.0, 0L);
-        RateLimitConfig config = new RateLimitConfig(10, 10.0); // 10 tokens/sec
+        RateLimitConfig config = new RateLimitConfig("gold", 10, 10.0); // 10 tokens/sec
 
         // WHEN: 1 second passes (enough to overflow)
-        long now = 1_000_000_000L;
+        long now = 1000L;
         TokenBucket refilled = bucket.refill(now, config);
 
         // THEN: It should be capped at 10.0 tokens
@@ -41,7 +41,7 @@ class TokenBucketTest {
     void shouldNotRefillIfTimeGoesBackwards() {
         // GIVEN: A bucket updated at time 100
         TokenBucket bucket = new TokenBucket(5.0, 100L);
-        RateLimitConfig config = new RateLimitConfig(10, 1.0);
+        RateLimitConfig config = new RateLimitConfig("gold", 10, 1.0);
 
         // WHEN: Time is provided as 90 (older than last refill)
         TokenBucket refilled = bucket.refill(90L, config);

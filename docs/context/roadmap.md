@@ -65,6 +65,24 @@ By keeping the interface in the Core, we can test the entire "Fail-Open" logic w
 
 ---
 
+## 🚀 Epic 1.5: Design Refinement (Addressing Structural Gaps) [COMPLETED]
+**Goal**: Refactor the Core to handle identified design flaws before proceeding to infrastructure.
+
+### 🏆 Completion Report: Epic 1.5
+We have successfully resolved the 10 architectural gaps identified during the review.
+
+| Gap | Resolution |
+| :--- | :--- |
+| **Request Weight** | Added `tokensToConsume` to `RateLimiter` and `Repository` interfaces. |
+| **Atomic Chained Limits** | Service now passes a `List<RateLimitConfig>` to the repository for a single atomic check. |
+| **Time Source Truth** | Decoupled `Repository` from time; Redis implementation will use `redis.call('TIME')`. |
+| **The Monotonic Trap** | Switched from `nanoTime()` to **Epoch Milliseconds** for distributed consistency. |
+| **Plan Identity** | `RateLimitConfig` now includes `planName` to prevent Redis key collisions. |
+| **Boolean Blindness** | Replaced `boolean` with `RateLimitResult` providing `remainingTokens` and `waitMillis`. |
+| **Orchestration Leak** | Moved plan lookup logic from the Aspect to `DefaultRateLimiter`. |
+| **Developer Friction** | Provided `InMemoryPlanRegistry` and standard `KeyResolvers` in Core. |
+| **Exception Hierarchy** | Updated service logic to handle missing plans gracefully and log failures. |
+
 ## 🚀 Epic 2: The Redis Adapter (The "Infra" Phase)
 **Goal**: Implement the distributed logic using Redis and Lua.
 

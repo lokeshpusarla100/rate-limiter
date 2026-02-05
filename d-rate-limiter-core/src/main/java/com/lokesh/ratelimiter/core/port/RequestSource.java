@@ -1,4 +1,4 @@
-package com.lokesh.ratelimiter.core;
+package com.lokesh.ratelimiter.core.port;
 
 /**
  * Port: Abstraction of an incoming request source.

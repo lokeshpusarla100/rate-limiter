@@ -1,4 +1,4 @@
-package com.lokesh.ratelimiter.core;
+package com.lokesh.ratelimiter.core.exception;
 
 /**
  * Exception thrown when a rate limit has been exceeded.

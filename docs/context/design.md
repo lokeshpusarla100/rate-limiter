@@ -45,34 +45,29 @@ sequenceDiagram
     participant U as User
     participant A as Aspect (@RateLimit)
     participant S as RateLimiterService
+    participant P as PlanRegistry
     participant R as RedisAdapter
     participant DB as Redis (Cache)
 
     U->>A: GET /api/resource
-    A->>S: resolveKey(request)
-    S-->>A: "user:123"
-    A->>S: getRule("gold_plan")
-    S-->>A: {cap:10, rate:1.0}
+    A->>S: allow(key, ["gold", "daily"], tokens=1)
     
-    A->>R: allow("user:123", rule)
+    S->>P: getPlans(["gold", "daily"])
+    P-->>S: List<RateLimitConfig>
+    
+    S->>R: tryAcquire(key, configs, tokens)
     
     alt Redis is Healthy
-        R->>DB: EVALSHA (sha, key, args)
-        DB->>DB: Get Time & Calc Refill
-        DB-->>R: 1 (Allowed)
-        R-->>A: true
-        A->>U: 200 OK (Execute Method)
-    else Redis Timeout
-        R-->>R: Catch Exception
-        R-->>A: true (Fail Open)
-        note right of A: Log Error, Don't Block
+        R->>DB: EVALSHA (sha, key, args, epoch_time)
+        DB-->>R: {allowed: 1, remaining: 5.0, wait: 0}
+        R-->>S: RateLimitResult(allowed=true, ...)
+        S-->>A: RateLimitResult
         A->>U: 200 OK
-    end
-    
-    alt Limit Exceeded
-        DB-->>R: 0 (Blocked)
-        R-->>A: false
-        A-->>U: 429 Too Many Requests
+    else Redis Timeout
+        R-->>S: throw RedisException
+        S-->>S: Handle & Log (Fail-Open)
+        S-->>A: RateLimitResult(allowed=true, reason="FAIL_OPEN")
+        A->>U: 200 OK
     end
 ```
 
@@ -109,20 +104,20 @@ graph LR
 
 ## 3. Data Flow (Request Lifecycle)
 
-1.  **Intercept**: Request hits a method annotated with `@RateLimit(key = "user", plan = "gold")`.
+1.  **Intercept**: Request hits a method annotated with `@RateLimit(key = "user", plan = "gold", tokens = 1)`.
 2.  **Resolve**:
     *   `KeyResolver` extracts the user ID (e.g., `user:123`).
     *   `PlanRegistry` looks up "gold" config (Capacity: 10, Refill: 1/sec).
+    *   **Weight**: The cost of the request (default 1) is identified.
 3.  **Execute**:
-    *   The `RateLimiterService` calls `repository.allow("user:123", 10, 1.0)`.
-    *   The Repository calculates the SHA1 of the Lua script.
-    *   It executes `EVALSHA` against Redis.
+    *   The `RateLimiterService` calls `repository.allow("user:123", rules, 1)`.
+    *   Note: For **Chained Limits**, a list of rules is passed to ensure atomicity.
 4.  **Redis Logic (Lua)**:
     *   **Get** current `tokens` and `last_refill` from Hash.
-    *   **Get** current Server Time (`TIME`).
+    *   **Time Source**: Get current Server Time (`redis.call('TIME')`) to prevent clock skew.
     *   **Calculate** refill: `delta = (now - last_refill) * rate`.
     *   **Update** tokens: `new_tokens = min(capacity, old_tokens + delta)`.
-    *   **Check**: If `new_tokens >= 1`, decrement and return `true`. Else, return `false`.
+    *   **Check**: If `new_tokens >= tokens_to_consume`, decrement and return `true`. Else, return `false`.
     *   **Save**: `HSET key ...` (with TTL).
 5.  **Result**:
     *   **True**: Method executes.
@@ -138,7 +133,7 @@ Example: `rate_limiter:gold:user_123`
 | Field | Type | Description |
 | :--- | :--- | :--- |
 | `t` | Binary (8 bytes) | Current Tokens (Double). |
-| `ts` | Binary (8 bytes) | Last Refill Timestamp (Long, nanoseconds). |
+| `ts` | Binary (8 bytes) | Last Refill Timestamp (Long, milliseconds/nanoseconds). |
 | `v` | Integer | Schema Version (Currently `1`). |
 
 *TTL is set to `Capacity / Rate` seconds (bucket lifetime).*
@@ -147,18 +142,33 @@ Example: `rate_limiter:gold:user_123`
 
 ```java
 public interface RateLimiter {
-    boolean allow(String key, RateLimitConfig config);
+    /** Orchestrates plan lookup and repository execution */
+    RateLimitResult allow(String key, List<String> planNames, int tokens);
 }
 
 public record RateLimitConfig(
+    String planName,
     long capacity,
     double tokensPerSecond
 ) {}
 
+public record RateLimitResult(
+    boolean allowed,
+    double remainingTokens,
+    long nanosToWait,
+    String reason
+) {}
+
 public interface KeyResolver {
-    String resolve(HttpServletRequest request);
+    String resolve(RequestSource source);
 }
 ```
+
+### 5.1 Provided Strategies (Core)
+The library provides several out-of-the-box implementations in the Core module:
+*   **`InMemoryPlanRegistry`**: Simple concurrent-map-based registry for testing or static rules.
+*   **`HeaderKeyResolver`**: Extracts rate-limit identity from a specific HTTP header (e.g., `X-API-KEY`).
+*   **`PrincipalKeyResolver`**: Uses the authenticated user's name as the rate-limit identity.
 
 ## 6. Resilience & Safety
 *   **Fail Open**: If `EVALSHA` throws a `RedisConnectionException`, the library logs an error and returns `true` (Allowed).

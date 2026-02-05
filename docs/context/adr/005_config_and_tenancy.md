@@ -15,7 +15,8 @@ We will separate **"Rules"** (The limits) from **"Binding"** (Where to apply the
 *   **Rules**: Defined in YAML (Startup) or Redis (Dynamic). We call these "Plans".
     *   Example: `Plan "silver" = 5 req/sec`.
 *   **Binding**: Defined in Code (Annotations).
-    *   Example: `@RateLimit(plan = "silver")`.
+    *   Example: `@RateLimit(plans = {"silver", "daily"})`.
+*   **Orchestration**: The `RateLimiter` service (Core) is responsible for looking up these plan names in the `PlanRegistry`. This keeps the driving adapter (Aspect) thin and ensures business logic like "Chained Limits" stays in the Core.
 
 ### 2. Dynamic Rules (Redis-Backed)
 *   **Decision**: The "Limit" (Capacity/Rate) will be fetched inside the Lua script from a separate Redis Key, falling back to the static config if missing.
@@ -35,10 +36,15 @@ To adhere to **ADR 001 (Hexagonal Architecture)** and prevent "Web Logic" from l
     *   **Testability**: Core tests can mock `RequestSource` without spinning up a mock web server.
     *   **Portability**: The library can be easily adapted to non-Servlet environments (e.g., gRPC, CLI, Kafka consumers) by implementing a new Adapter.
 
-### 4. Chained Limits
-*   **Decision**: The `@RateLimit` annotation will accept a *list* of plans.
-*   **Logic**: The request is checked against ALL plans in the list.
-*   **Rule**: The request is allowed IF AND ONLY IF all checks pass. If the first check fails, we short-circuit (do not deduct tokens from subsequent buckets) and block.
+### 4. Chained Limits (Atomic)
+*   **Decision**: The `@RateLimit` annotation will accept a *list* of plans. The `RateLimiter` service will pass this list to the `Repository`.
+*   **Logic**: The request is checked against ALL plans in the list **atomically** within a single Lua script.
+*   **Rule**: The request is allowed IF AND ONLY IF all checks pass. If one fails, NO tokens are deducted from any bucket. This prevents "partial success" where some limits are hit and others aren't, but tokens are still consumed.
+
+### 5. Request Weight (Cost)
+*   **Decision**: The `@RateLimit` annotation will include a `tokens` field (defaulting to 1).
+*   **Rationale**: Allows distinguishing between "Cheap" and "Expensive" operations (e.g., GET vs. POST or Bulk Export).
+*   **Interface**: The `RateLimiter.allow` method will accept `int tokensToConsume`.
 
 ## Consequences
 *   **Flexibility**: Extremely high. Decouples "Code" from "Policy".

@@ -4,73 +4,77 @@ A production-grade, distributed rate-limiting library for Java applications, bui
 
 [![Java Version](https://img.shields.io/badge/Java-21-blue.svg)](https://www.oracle.com/java/technologies/javase/jdk21-archive-downloads.html)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.2-brightgreen.svg)](https://spring.io/projects/spring-boot)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Architecture](https://img.shields.io/badge/Architecture-Hexagonal-orange.svg)](#-architecture)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ## 🚀 Overview
 
-`d-rate-limiter` provides a robust implementation of the **Token Bucket** algorithm for distributed environments. By leveraging Redis and Lua scripting, it ensures atomic operations across multiple application instances while maintaining sub-millisecond overhead.
+`d-rate-limiter` provides a robust, high-performance implementation of the **Token Bucket** algorithm for distributed JVM environments. It is designed to be a "Zero-Friction" library that protects your services without introducing fragility.
 
-### Key Features
+### Key Features (Post-Epic 1.5 Refinement)
 
-*   **Distributed Atomicity**: Uses Lua scripts in Redis to prevent race conditions without complex locking.
-*   **Hexagonal Architecture**: Core logic is isolated from infrastructure (Redis/Spring), making it highly testable and future-proof.
-*   **Fail-Open Resilience**: If Redis becomes unavailable, the library defaults to allowing requests, ensuring your business logic isn't blocked by infrastructure failures.
-*   **High Performance**: Custom binary serialization reduces network payload and CPU overhead.
-*   **Spring Boot Starter**: Seamless integration with `@RateLimit` annotations and auto-configuration.
-*   **Multi-Tenancy**: Support for different "Plans" (e.g., Bronze, Silver, Gold) and flexible "Key Resolvers" (IP, User ID, API Key).
+*   **🛡️ Fail-Open Resilience**: Infrastructure (Redis) failures log errors but never block traffic. Your business remains available even if the rate limiter is down.
+*   **🔗 Atomic Chained Limits**: Apply multiple limits (e.g., 10/sec AND 1000/hour) in a single atomic operation. No partial token leaks.
+*   **📊 Rich Metadata**: Returns `RateLimitResult` containing remaining tokens and `waitMillis` for helpful `Retry-After` headers.
+*   **⚖️ Request Weighting**: Support for "Expensive" vs "Cheap" operations (e.g., Bulk Export costs 5 tokens, Ping costs 1).
+*   **🕒 Distributed Consistency**: Uses Redis Server Time as the source of truth to eliminate clock skew between application instances.
+*   **🧩 Hexagonal Integrity**: Core logic is 100% "Pure Java" with zero external dependencies, ensuring maximum portability and testability.
 
 ## 🏗️ Architecture
 
-The project follows **Hexagonal Architecture (Ports & Adapters)** principles:
+The project follows a strict **Hexagonal Architecture (Ports & Adapters)** with a "Screaming" package structure:
 
-1.  **Core Module**: Pure Java logic. Contains the mathematical Token Bucket implementation and Port definitions.
-2.  **Redis Module**: Implementation of the storage adapter using Lettuce and custom Lua scripts.
-3.  **Spring Boot Starter**: The "Driving Adapter" that provides AOP aspects and configuration wiring.
-
-Detailed architectural decisions can be found in the [docs/context/adr](./docs/context/adr) directory.
+*   **`com.lokesh.ratelimiter.core.model`**: Immutable domain entities (TokenBucket, Config).
+*   **`com.lokesh.ratelimiter.core.port`**: Driving and Driven interfaces defining the system's boundaries.
+*   **`com.lokesh.ratelimiter.core.service`**: Domain orchestrators (DefaultRateLimiter) implementing Fail-Open and Chained logic.
+*   **`com.lokesh.ratelimiter.core.support`**: Standard implementations (Key Resolvers, Registries) to reduce developer friction.
 
 ## 🛠️ Tech Stack
 
-*   **Runtime**: Java 21 (Records, Virtual Threads ready)
+*   **Runtime**: Java 21 (Records, Sealed Types)
 *   **Framework**: Spring Boot 4.0.2
-*   **Communication**: Lettuce (Redis client)
-*   **Testing**: JUnit 5, Testcontainers (Redis), AssertJ
-*   **Build**: Maven Multi-Module
+*   **Communication**: Lettuce (Non-blocking Redis client)
+*   **Serialization**: Custom Binary (ADR 004) for ultra-low latency.
+*   **Testing**: JUnit 5, Mockito, AssertJ, Testcontainers.
 
-## 🚦 Getting Started
+## 🚦 Usage
 
-*(Note: This library is currently in active development. Usage instructions will be updated as Epic 3 is completed.)*
-
-### Prerequisites
-*   JDK 21
-*   Redis 6.2+
-
-### Installation
-Add the dependency to your `pom.xml`:
-```xml
-<dependency>
-    <groupId>com.lokesh.ratelimiter</groupId>
-    <artifactId>d-rate-limiter-spring-boot-starter</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
-</dependency>
+### 1. Define Plans
+```java
+InMemoryPlanRegistry registry = new InMemoryPlanRegistry();
+registry.registerPlan(new RateLimitConfig("gold", 100, 10.0)); // 100 capacity, 10 tokens/sec
 ```
 
-## 📜 Principles & Standards
+### 2. Execute Check
+```java
+RateLimitResult result = rateLimiter.allow("user_123", List.of("gold"), 1);
 
-This project is built with high engineering standards:
-*   **SOLID**: Strict adherence to object-oriented design principles.
-*   **TDD-First**: Every core feature is developed using the Red-Green-Refactor cycle.
-*   **Zero Transitive Dependencies**: Minimal external footprint to avoid dependency hell for consumers.
-*   **Immutability**: Domain objects are immutable records for thread-safe operations.
+if (result.allowed()) {
+    // Process request...
+    System.out.println("Remaining: " + result.remainingTokens());
+} else {
+    // Block request...
+    System.out.println("Retry after: " + result.waitMillis() + "ms");
+}
+```
+
+## 📜 Architectural Decisions (ADRs)
+
+We maintain a disciplined log of architectural choices:
+- [ADR 001: Hexagonal Architecture](./docs/context/adr/001_architecture_pattern.md)
+- [ADR 004: Redis Data Strategy & Binary Serialization](./docs/context/adr/004_redis_strategy.md)
+- [ADR 005: Atomic Chained Limits & Configuration](./docs/context/adr/005_config_and_tenancy.md)
+- [ADR 007: Distributed Time Consistency](./docs/context/adr/007_distributed_time_consistency.md)
 
 ## 🗺️ Roadmap
 
-- [x] Epic 1: Project Skeleton & Core Domain (In Progress)
-- [ ] Epic 2: Redis Adapter & Lua Scripting
-- [ ] Epic 3: Spring Boot Starter & AOP
-- [ ] Epic 4: Resilience (Fail-Open) & Metrics
-- [ ] Epic 5: Load Testing & Samples
+- [x] **Epic 1**: Core Domain Implementation
+- [x] **Epic 1.5**: Structural Refinement (10 Gaps Resolved)
+- [ ] **Epic 2**: Redis Adapter & Lua Scripting (Current)
+- [ ] **Epic 3**: Spring Boot Starter & AOP
+- [ ] **Epic 4**: Resilience & Observability
+- [ ] **Epic 5**: Load Testing & Samples
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT © [Lokesh](LICENSE)

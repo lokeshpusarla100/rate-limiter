@@ -1,4 +1,4 @@
-package com.lokesh.ratelimiter.core;
+package com.lokesh.ratelimiter.core.port;
 
 /**
  * Port: Strategy for resolving a unique rate-limiting key from a request.

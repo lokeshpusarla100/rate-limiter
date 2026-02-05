@@ -36,7 +36,9 @@ We will store the bucket state in a Redis Hash.
 ### 4. Time Source: Redis Time
 *   **Decision**: The Lua script will call `redis.call('TIME')` to get the current time.
 *   **Rationale**: Eliminates "Clock Skew" issues between different application servers. The Redis server becomes the single source of truth for time.
+*   **Interface Impact**: The `RateLimiterRepository` interface in the Core will **not** accept a timestamp. The responsibility for sourcing time is delegated to the specific adapter.
 
-## Consequences
-*   **Complexity**: Binary serialization requires writing custom Encoders/Decoders. Debugging requires a custom tool to read the binary values.
-*   **Performance**: `EVALSHA` + Binary is the highest performance option available.
+### 5. Binary Precision
+*   **Decision**: Timestamps in Redis will be stored as Milliseconds or Nanoseconds (8-byte Longs).
+*   **Rationale**: Ensures high resolution for high-RPS scenarios.
+

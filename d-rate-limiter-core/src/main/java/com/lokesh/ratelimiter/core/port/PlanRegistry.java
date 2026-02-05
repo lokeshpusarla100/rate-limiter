@@ -1,5 +1,6 @@
-package com.lokesh.ratelimiter.core;
+package com.lokesh.ratelimiter.core.port;
 
+import com.lokesh.ratelimiter.core.model.RateLimitConfig;
 import java.util.Optional;
 
 /**
