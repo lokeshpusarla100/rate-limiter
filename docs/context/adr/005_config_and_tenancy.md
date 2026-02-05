@@ -46,6 +46,14 @@ To adhere to **ADR 001 (Hexagonal Architecture)** and prevent "Web Logic" from l
 *   **Rationale**: Allows distinguishing between "Cheap" and "Expensive" operations (e.g., GET vs. POST or Bulk Export).
 *   **Interface**: The `RateLimiter.allow` method will accept `int tokensToConsume`.
 
+### 6. Missing Plan Security [Fix 2]
+*   **Decision**: We will implement a `MissingPlanPolicy` to control system behavior when a requested plan name cannot be resolved.
+*   **Options**:
+    *   `FAIL_FAST`: Throw an exception (Default for high security).
+    *   `SKIP_WITH_WARN`: Log a warning and proceed without that limit.
+    *   `REQUIRE_AT_LEAST_ONE`: Fail only if NO plans are resolved.
+*   **Rationale**: Prevents "Silent Bypass" where a typo in a configuration string results in zero rate limiting being applied.
+
 ## Consequences
 *   **Flexibility**: Extremely high. Decouples "Code" from "Policy".
 *   **Overhead**: Checking multiple plans (Chained Limits) means multiple Redis calls or a more complex Lua script loop. We will optimize by doing the loop *inside* a single Lua call.

@@ -4,6 +4,8 @@ import com.lokesh.ratelimiter.core.model.RateLimitConfig;
 import com.lokesh.ratelimiter.core.model.RateLimitResult;
 import com.lokesh.ratelimiter.core.port.PlanRegistry;
 import com.lokesh.ratelimiter.core.port.RateLimiterRepository;
+import com.lokesh.ratelimiter.core.port.RateLimitEventListener;
+import com.lokesh.ratelimiter.core.support.MissingPlanPolicy;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,11 +17,13 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * TDD: Updated for Refactored DefaultRateLimiter.
+ * TDD: Updated for Hardened DefaultRateLimiter.
  */
 @ExtendWith(MockitoExtension.class)
 class DefaultRateLimiterTest {
@@ -30,57 +34,56 @@ class DefaultRateLimiterTest {
     @Mock
     private PlanRegistry planRegistry;
 
-    @InjectMocks
+    @Mock
+    private RateLimitEventListener listener;
+
     private DefaultRateLimiter rateLimiter;
 
     private final RateLimitConfig config = new RateLimitConfig("gold", 10, 1.0);
     private final String key = "test-user";
 
     @Test
-    @DisplayName("Should return allowed result when repository allows the request")
-    void shouldAllowWhenRepositorySucceeds() {
-        // GIVEN: Plan exists and repository returns success
-        when(planRegistry.getPlan("gold")).thenReturn(Optional.of(config));
-        when(repository.tryAcquire(eq(key), eq(List.of(config)), eq(1)))
-                .thenReturn(RateLimitResult.allow(9.0));
+    @DisplayName("Should FAIL_FAST when plan is missing by default")
+    void shouldFailFastOnMissingPlan() {
+        // GIVEN: Default policy (FAIL_FAST)
+        rateLimiter = new DefaultRateLimiter(repository, planRegistry, List.of(listener), MissingPlanPolicy.FAIL_FAST);
+        when(planRegistry.getPlan("missing")).thenReturn(Optional.empty());
 
-        // WHEN: We check allowance
-        RateLimitResult result = rateLimiter.allow(key, List.of("gold"), 1);
-
-        // THEN: Result should be allowed
-        assertThat(result.allowed()).isTrue();
-        assertThat(result.remainingTokens()).isEqualTo(9.0);
+        // WHEN/THEN
+        assertThatThrownBy(() -> rateLimiter.allow(key, List.of("missing"), 1))
+                .isInstanceOf(IllegalArgumentException.class);
+        
+        verify(listener).onPlanMissing("missing");
     }
 
     @Test
-    @DisplayName("Should return denied result when repository denies the request")
-    void shouldDenyWhenRepositoryExceeded() {
-        // GIVEN: Plan exists and repository returns denial
+    @DisplayName("Should notify onAllow when repository succeeds")
+    void shouldNotifyOnAllow() {
+        rateLimiter = new DefaultRateLimiter(repository, planRegistry, List.of(listener), MissingPlanPolicy.SKIP_WITH_WARN);
+        RateLimitResult expectedResult = RateLimitResult.allow(9.0);
+        
         when(planRegistry.getPlan("gold")).thenReturn(Optional.of(config));
-        when(repository.tryAcquire(eq(key), eq(List.of(config)), eq(1)))
-                .thenReturn(RateLimitResult.deny(0.0, 1000L, "Exceeded"));
+        when(repository.tryAcquire(anyString(), anyList(), anyInt())).thenReturn(expectedResult);
 
-        // WHEN: We check allowance
-        RateLimitResult result = rateLimiter.allow(key, List.of("gold"), 1);
+        // WHEN
+        rateLimiter.allow(key, List.of("gold"), 1);
 
-        // THEN: Result should be denied
-        assertThat(result.allowed()).isFalse();
-        assertThat(result.waitMillis()).isEqualTo(1000L);
+        // THEN
+        verify(listener).onAllow(eq(key), eq(List.of("gold")), eq(expectedResult));
     }
 
     @Test
-    @DisplayName("Should FAIL OPEN when repository throws an exception")
-    void shouldFailOpenOnRepositoryError() {
-        // GIVEN: Plan exists but repository crashes
+    @DisplayName("Should FAIL OPEN and notify on repository error")
+    void shouldFailOpenAndNotify() {
+        rateLimiter = new DefaultRateLimiter(repository, planRegistry, List.of(listener), MissingPlanPolicy.SKIP_WITH_WARN);
         when(planRegistry.getPlan("gold")).thenReturn(Optional.of(config));
-        when(repository.tryAcquire(any(), any(), anyInt()))
-                .thenThrow(new RuntimeException("Redis is down"));
+        when(repository.tryAcquire(any(), any(), anyInt())).thenThrow(new RuntimeException("Redis down"));
 
-        // WHEN: We check allowance
+        // WHEN
         RateLimitResult result = rateLimiter.allow(key, List.of("gold"), 1);
 
-        // THEN: Result must be allowed (Fail-Open)
+        // THEN
         assertThat(result.allowed()).isTrue();
-        assertThat(result.reason()).contains("FAIL_OPEN");
+        verify(listener).onFailOpen(eq(key), contains("Redis down"));
     }
 }

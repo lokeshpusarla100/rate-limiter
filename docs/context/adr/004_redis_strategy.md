@@ -38,7 +38,12 @@ We will store the bucket state in a Redis Hash.
 *   **Rationale**: Eliminates "Clock Skew" issues between different application servers. The Redis server becomes the single source of truth for time.
 *   **Interface Impact**: The `RateLimiterRepository` interface in the Core will **not** accept a timestamp. The responsibility for sourcing time is delegated to the specific adapter.
 
-### 5. Binary Precision
-*   **Decision**: Timestamps in Redis will be stored as Milliseconds or Nanoseconds (8-byte Longs).
-*   **Rationale**: Ensures high resolution for high-RPS scenarios.
+### 6. Network Overhead [Fix 11]
+*   **Decision**: We accept a small increase in network payload (~50-100 bytes) by passing the `RateLimitConfig` to the repository on every request.
+*   **Rationale**: This enables "Hot Reloading" of limits. Configuration can be updated in the application/Redis and applied instantly to the next request without needing a restart or a database migration.
+
+## Consequences
+*   **Complexity**: Binary serialization requires writing custom Encoders/Decoders. Debugging requires a custom tool to read the binary values.
+*   **Performance**: `EVALSHA` + Binary is the highest performance option available.
+*   **Agility**: Operates with high operational flexibility at a minor bandwidth cost.
 

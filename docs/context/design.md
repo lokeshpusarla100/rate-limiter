@@ -60,11 +60,14 @@ graph TD
         subgraph "Outbound Ports (SPI)"
             RepoPort((RateLimiterRepository))
             SourcePort((RequestSource))
+            EventPort((RateLimitEventListener))
         end
 
-        subgraph "Support (Standard Impls)"
+        subgraph "Support (Utilities)"
             MemRegistry[InMemoryPlanRegistry]
             HeaderKey[HeaderKeyResolver]
+            KeyBuilder[RateLimitKey]
+            Policy[MissingPlanPolicy]
         end
     end
 
@@ -79,6 +82,11 @@ graph TD
     Service -- implements --> RateLimiterPort
     Service -->|3. Lookup Config| RegistryPort
     Service -->|4. Atomic Check| RepoPort
+    Service -->|5. Notify| EventPort
+    
+    %% Observability Flow
+    EventPort -.->|6. Push| Metrics[MicrometerListener]
+    Metrics -.-> Prometheus[Prometheus]
     
     %% Data Flow
     RepoPort -.->|Returns| Result
@@ -161,13 +169,25 @@ sequenceDiagram
     participant S as RateLimiterService
     participant P as PlanRegistry
     participant R as RedisAdapter
+    participant E as EventListener
     participant DB as Redis (Cache)
 
     U->>A: GET /api/resource
     A->>S: allow(key, ["gold", "daily"], tokens=1)
     
-    S->>P: getPlans(["gold", "daily"])
-    P-->>S: List<RateLimitConfig>
+    loop For each PlanName
+        S->>P: getPlan(name)
+        alt Plan Missing & Policy=FAIL_FAST
+            P-->>S: empty
+            S->>E: onPlanMissing(name)
+            S-->>A: throw IllegalArgumentException
+            A-->>U: 400 Bad Request / Error
+        else Plan Missing & Policy=SKIP
+            P-->>S: empty
+            S->>E: onPlanMissing(name)
+            S->>S: continue
+        end
+    end
     
     S->>R: tryAcquire(key, configs, tokens)
     
@@ -175,13 +195,20 @@ sequenceDiagram
         R->>DB: EVALSHA (sha, key, args, epoch_time)
         DB-->>R: {allowed: 1, remaining: 5.0, wait: 0}
         R-->>S: RateLimitResult(allowed=true, ...)
+        
+        alt Verdict: ALLOWED
+            S->>E: onAllow(key, plans, result)
+        else Verdict: DENIED
+            S->>E: onDeny(key, plans, result)
+        end
+        
         S-->>A: RateLimitResult
-        A->>U: 200 OK
-    else Redis Timeout
+        A->>U: 200 OK / 429 Too Many Requests
+    else Redis Timeout / Connection Error
         R-->>S: throw RedisException
-        S-->>S: Handle & Log (Fail-Open)
+        S->>E: onFailOpen(key, reason)
         S-->>A: RateLimitResult(allowed=true, reason="FAIL_OPEN")
-        A->>U: 200 OK
+        A->>U: 200 OK (Fail-Open)
     end
 ```
 
@@ -252,30 +279,32 @@ Example: `rate_limiter:gold:user_123`
 
 *TTL is set to `Capacity / Rate` seconds (bucket lifetime).*
 
-## 5. Class Design (Core)
+## 5. Class Design (Core Refined)
 
 ```java
-public interface RateLimiter {
-    /** Orchestrates plan lookup and repository execution */
-    RateLimitResult allow(String key, List<String> planNames, int tokens);
+public record TokenBucket(double tokens, long lastRefillMillis) {
+    /** [Fix 6] Domain-driven consumption logic */
+    public ConsumptionResult tryConsume(long now, int cost, RateLimitConfig config);
 }
 
-public record RateLimitConfig(
-    String planName,
-    long capacity,
-    double tokensPerSecond
-) {}
+public interface RateLimitEventListener {
+    /** [Fix 7] Observability Hooks */
+    void onAllow(String key, List<String> plans, RateLimitResult result);
+    void onDeny(String key, List<String> plans, RateLimitResult result);
+    void onFailOpen(String key, String reason);
+}
+
+public enum MissingPlanPolicy {
+    /** [Fix 2] Plan Security */
+    FAIL_FAST, SKIP_WITH_WARN, REQUIRE_AT_LEAST_ONE
+}
 
 public record RateLimitResult(
     boolean allowed,
-    double remainingTokens,
-    long nanosToWait,
+    double remainingTokens, // [Fix 4] Minimum across chained limits
+    long waitMillis,
     String reason
 ) {}
-
-public interface KeyResolver {
-    String resolve(RequestSource source);
-}
 ```
 
 ### 5.1 Provided Strategies (Core)

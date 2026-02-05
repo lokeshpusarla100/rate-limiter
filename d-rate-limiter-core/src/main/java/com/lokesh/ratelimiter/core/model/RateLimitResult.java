@@ -8,7 +8,8 @@ package com.lokesh.ratelimiter.core.model;
  * driving adapters to generate helpful responses (e.g., HTTP 429 with Retry-After).
  *
  * @param allowed Whether the request passed all rate limit checks.
- * @param remainingTokens The number of tokens left in the (most restrictive) bucket after the request.
+ * @param remainingTokens [Fix 4] The minimum tokens remaining across all evaluated buckets. 
+ *                        Represents the most restrictive constraint.
  * @param waitMillis If denied, the duration the client should wait before a token becomes available.
  * @param reason A descriptive string for logging or debugging (e.g., "OK", "FAIL_OPEN").
  */

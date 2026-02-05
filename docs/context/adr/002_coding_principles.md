@@ -38,7 +38,11 @@ We will adhere to a strict set of Engineering Principles tailored for **High-Rel
     *   *How*: We will use standard Java features (Records, Optional) instead of utility libraries (Lombok, Apache Commons) wherever possible.
 *   **Immutability**:
     *   *Why*: Thread safety is critical in high-concurrency environments.
-    *   *How*: Domain objects (`TokenBucket`) will be immutable `records`. State changes result in *new* objects, not mutated fields (functional style).
+    *   *How*: Domain objects (`TokenBucket`, `RateLimitConfig`, `RateLimitResult`) will be immutable `records`. State changes result in *new* objects, not mutated fields.
+
+### 4. Concurrency Contract [Fix 12]
+*   **Decision**: All `Port` implementations (e.g., `PlanRegistry`, `RateLimiterRepository`) MUST be thread-safe for concurrent reads.
+*   **Implementation**: If an implementation supports runtime writes (like `InMemoryPlanRegistry.registerPlan`), it must use appropriate synchronization (e.g., `ConcurrentHashMap`).
 
 ## Consequences
 

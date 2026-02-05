@@ -83,7 +83,29 @@ We have successfully resolved the 10 architectural gaps identified during the re
 | **Developer Friction** | Provided `InMemoryPlanRegistry` and standard `KeyResolvers` in Core. |
 | **Exception Hierarchy** | Updated service logic to handle missing plans gracefully and log failures. |
 
+## 🚀 Epic 1.6: Engineering Hardening (The 12 Fixes) [PENDING]
+**Goal**: Address all critical and priority gaps in the core domain and contract.
+
+### Logic & Security Fixes
+*   **[Fix 6] Domain-Driven Logic**: Move consumption logic from `DefaultRateLimiter` into `TokenBucket.tryConsume()`.
+*   **[Fix 2] Plan Security**: Implement `MissingPlanPolicy` (FAIL_FAST, SKIP, ALLOW) to prevent silent bypasses.
+*   **[Fix 4] Semantic Clarity**: Update `RateLimitResult` to explicitly return the *minimum* tokens across chained limits.
+*   **[Fix 8] Key Standardization**: Implement `RateLimitKey` builder to prevent collisions and undefined formats.
+
+### Observability & Resilience
+*   **[Fix 7] Event Hooks**: Implement `RateLimitEventListener` port for Micrometer/Logging integration.
+*   **[Fix 3] Circuit Breaker**: Prepare the `Repository` wrapper for Resilience4j integration.
+*   **[Fix 5] Timeout Contract**: Explicitly define and document the 100ms SLA in the Repository port.
+
+### Documentation & Safety (ADRs)
+*   **[Fix 9] Precision Audit**: Add Javadoc and tests for floating-point bounds.
+*   **[Fix 10] Clock Skew**: Document backwards-clock behavior in Javadoc.
+*   **[Fix 11] Overhead Disclosure**: Document network/payload trade-offs.
+*   **[Fix 12] Thread Safety**: Explicitly document the concurrency contract for all Ports.
+
 ## 🚀 Epic 2: The Redis Adapter (The "Infra" Phase)
+*   **[Fix 1] Critical Compatibility**: Implement the `JavaLuaCompatibilityTest` using Testcontainers.
+
 **Goal**: Implement the distributed logic using Redis and Lua.
 
 *   **2.1 Module Setup**: Configure `d-rate-limiter-redis` with `spring-boot-starter-data-redis`.
