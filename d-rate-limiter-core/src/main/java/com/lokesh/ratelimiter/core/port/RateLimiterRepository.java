@@ -24,6 +24,11 @@ public interface RateLimiterRepository {
     /**
      * Executes an atomic check-and-refill operation against multiple configurations.
      *
+     * <p><b>[Fix 5] Timeout Contract</b>: Implementations MUST complete within 100ms 
+     * or throw a {@link java.util.concurrent.TimeoutException}. This ensures that the 
+     * rate limiter does not become a bottleneck or cause thread exhaustion in 
+     * the calling application.
+     *
      * @param key The unique identifier for the rate limit bucket.
      * @param configs The list of policies to evaluate concurrently.
      * @param tokensToConsume The weight of the current request.

@@ -34,4 +34,4 @@
 - [ ] **Precision [Fix 9]**: Are floating-point drift risks documented/tested?
 
 ---
-*Reference: See `docs/context/adr/` for detailed rationale behind these checks.*
+*Reference: See `docs/context/adr/` and `docs/context/principles.md` for detailed rationale behind these checks.*

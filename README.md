@@ -58,13 +58,14 @@ if (result.allowed()) {
 }
 ```
 
-## 📜 Architectural Decisions (ADRs)
+## 📜 Architectural Decisions (ADRs) & Principles
 
-We maintain a disciplined log of architectural choices:
+We maintain a disciplined log of architectural choices and standards:
 - [ADR 001: Hexagonal Architecture](./docs/context/adr/001_architecture_pattern.md)
 - [ADR 004: Redis Data Strategy & Binary Serialization](./docs/context/adr/004_redis_strategy.md)
 - [ADR 005: Atomic Chained Limits & Configuration](./docs/context/adr/005_config_and_tenancy.md)
 - [ADR 007: Distributed Time Consistency](./docs/context/adr/007_distributed_time_consistency.md)
+- [Coding Principles & Standards](./docs/context/principles.md)
 
 ## 🗺️ Roadmap
 
