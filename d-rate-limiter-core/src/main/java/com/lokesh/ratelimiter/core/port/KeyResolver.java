@@ -5,9 +5,12 @@ package com.lokesh.ratelimiter.core.port;
  *
  * <p>Architectural Alignment:
  * <ul>
- *   <li><b>ADR 005 (Key Resolvers)</b>: Decouples "Who" is being limited from "How" they are limited.
+ *   <li><b>ADR 005 (Key Resolvers)</b>: Decouples "Who" is being limited from "How" is limited.
  *       Allows users to provide custom strategies for identifying clients (e.g., by IP, User ID, or API Key).</li>
  * </ul>
+ * 
+ * <p><b>Concurrency Contract [Fix 12]</b>: Implementations MUST be thread-safe.
+ * Resolvers are stateless or immutable by design to handle high concurrency.
  */
 @FunctionalInterface
 public interface KeyResolver {

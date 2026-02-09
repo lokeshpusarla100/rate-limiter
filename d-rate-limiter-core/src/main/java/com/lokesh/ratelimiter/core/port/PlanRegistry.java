@@ -12,6 +12,10 @@ import java.util.Optional;
  *       from the "Rule" (Config). This allows for centralized management and 
  *       dynamic updates of limits (e.g., via Redis or YAML).</li>
  * </ul>
+ * 
+ * <p><b>Concurrency Contract [Fix 12]</b>: Implementations MUST be thread-safe.
+ * This registry will be accessed concurrently by multiple request threads.
+ * Any internal state updates must be synchronized.
  */
 public interface PlanRegistry {
 
