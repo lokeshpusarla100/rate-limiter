@@ -44,3 +44,7 @@ logs/
 tmp/
 .temp/
 .gemini/
+
+# Architecture Documentation
+GEMINI.md
+architecture_diagram.html
