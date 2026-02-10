@@ -37,6 +37,7 @@ class DefaultRateLimiterTest {
     @Mock
     private RateLimitEventListener listener;
 
+    @InjectMocks
     private DefaultRateLimiter rateLimiter;
 
     private final RateLimitConfig config = new RateLimitConfig("gold", 10, 1.0);
@@ -52,16 +53,17 @@ class DefaultRateLimiterTest {
         // WHEN/THEN
         assertThatThrownBy(() -> rateLimiter.allow(key, List.of("missing"), 1))
                 .isInstanceOf(IllegalArgumentException.class);
-        
+
         verify(listener).onPlanMissing("missing");
     }
 
     @Test
     @DisplayName("Should notify onAllow when repository succeeds")
     void shouldNotifyOnAllow() {
-        rateLimiter = new DefaultRateLimiter(repository, planRegistry, List.of(listener), MissingPlanPolicy.SKIP_WITH_WARN);
+        rateLimiter = new DefaultRateLimiter(repository, planRegistry, List.of(listener),
+                MissingPlanPolicy.SKIP_WITH_WARN);
         RateLimitResult expectedResult = RateLimitResult.allow(9.0);
-        
+
         when(planRegistry.getPlan("gold")).thenReturn(Optional.of(config));
         when(repository.tryAcquire(anyString(), anyList(), anyInt())).thenReturn(expectedResult);
 
@@ -75,7 +77,8 @@ class DefaultRateLimiterTest {
     @Test
     @DisplayName("Should FAIL OPEN and notify on repository error")
     void shouldFailOpenAndNotify() {
-        rateLimiter = new DefaultRateLimiter(repository, planRegistry, List.of(listener), MissingPlanPolicy.SKIP_WITH_WARN);
+        rateLimiter = new DefaultRateLimiter(repository, planRegistry, List.of(listener),
+                MissingPlanPolicy.SKIP_WITH_WARN);
         when(planRegistry.getPlan("gold")).thenReturn(Optional.of(config));
         when(repository.tryAcquire(any(), any(), anyInt())).thenThrow(new RuntimeException("Redis down"));
 

@@ -1,24 +1,39 @@
 package com.lokesh.ratelimiter.core.model;
 
 /**
- * Internal result of a token consumption attempt within the domain model.
- * 
- * <p>Architectural Role: <b>Value Object</b>.
- * This record encapsulates the atomic outcome of refilling and consuming from a 
- * {@link TokenBucket}. It prevents the leak of domain logic into adapters.
+ * Internal result of a <strong>single</strong> token-bucket consume attempt.
  *
- * @param allowed True if the bucket had enough tokens to satisfy the request.
- * @param updatedBucket The new state of the bucket after consumption (if allowed) or refill.
- * @param waitMillis If denied, the number of milliseconds the client must wait for a token.
+ * <p>
+ * This record is used exclusively within the domain layer by
+ * {@link TokenBucket#consume} to return both the allow/deny decision and
+ * the <em>mutated bucket state</em> so the caller can persist it.
+ * It is never exposed to external callers.
+ *
+ * <h3>ConsumptionResult vs RateLimitResult</h3>
+ * <ul>
+ * <li>{@code ConsumptionResult} — raw output of one bucket's math
+ * (carries the updated {@link TokenBucket}).</li>
+ * <li>{@link RateLimitResult} — public-facing response returned by
+ * {@code DefaultRateLimiter.tryConsume()}, aggregated across all
+ * evaluated limits, with a human/machine-friendly reason and
+ * fail-open support. It never exposes internal bucket state.</li>
+ * </ul>
+ *
+ * @param allowed       {@code true} if this bucket had enough tokens for the
+ *                      request.
+ * @param updatedBucket Bucket state after refill and (if allowed) token
+ *                      deduction.
+ * @param waitMillis    If denied, milliseconds the caller must wait before this
+ *                      bucket would have enough tokens to grant a retry.
  */
 public record ConsumptionResult(
-    boolean allowed,
-    TokenBucket updatedBucket,
-    long waitMillis
-) {
+        boolean allowed,
+        TokenBucket updatedBucket,
+        long waitMillis) {
     /**
-     * Creates a successful consumption result.
-     * @param bucket The new state with tokens deducted.
+     * Creates an allowed consumption result.
+     *
+     * @param bucket updated state with tokens deducted.
      */
     public static ConsumptionResult success(TokenBucket bucket) {
         return new ConsumptionResult(true, bucket, 0);
@@ -26,8 +41,9 @@ public record ConsumptionResult(
 
     /**
      * Creates a denied consumption result.
-     * @param bucket The state after refill but without deduction.
-     * @param waitMillis Time until next token availability.
+     *
+     * @param bucket     state after refill, without deduction.
+     * @param waitMillis wait time before enough tokens are available.
      */
     public static ConsumptionResult denied(TokenBucket bucket, long waitMillis) {
         return new ConsumptionResult(false, bucket, waitMillis);

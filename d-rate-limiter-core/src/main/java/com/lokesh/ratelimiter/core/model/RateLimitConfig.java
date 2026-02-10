@@ -23,7 +23,6 @@ import java.util.Objects;
  * @param tokensPerSecond The refill rate of the bucket.
  */
 public record RateLimitConfig(String planName, long capacity, double tokensPerSecond) {
-
     public RateLimitConfig {
         Objects.requireNonNull(planName, "planName must not be null");
         if (capacity <= 0) {
