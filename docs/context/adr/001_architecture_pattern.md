@@ -20,7 +20,7 @@ We will adopt the **Hexagonal Architecture** (also known as Ports & Adapters) fo
     *   **Responsibility**: Decides *if* a request should be allowed based on abstract state.
 
 2.  **The Adapters (Infrastructure)**:
-    *   **Driven Adapter (Right Side)**: `RedisRateLimiterRepository`. Implements the repository interface defined in the Core to talk to Redis using Lettuce/Lua.
+    *   **Driven Adapter (Right Side)**: `RedisRateLimiterRepository`. Implements the repository interface defined in the Core to talk to Redis using Lettuce/Lua. As Redis-native code, Lua scripts are considered an implementation detail of this adapter, loaded and managed by the Java adapter as internal classpath resources (located in `src/main/resources/lua/`) to ensure the adapter is self-contained and follows standard Maven packaging.
     *   **Driving Adapter (Left Side)**: `RateLimitAspect` (Spring AOP). Intercepts user requests and "drives" the Core logic.
 
 ## Consequences

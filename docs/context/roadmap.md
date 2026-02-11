@@ -109,7 +109,7 @@ We have successfully resolved the 10 architectural gaps identified during the re
 **Goal**: Implement the distributed logic using Redis and Lua.
 
 *   **2.1 Module Setup**: Configure `d-rate-limiter-redis` with `spring-boot-starter-data-redis`.
-*   **2.2 Lua Scripting**: Write the `token_bucket.lua` script (Atomic Get-Calculate-Update).
+*   **2.2 Lua Scripting**: Write the `acquire_token.lua` script in `src/main/resources/lua/` (Atomic Get-Calculate-Update).
 *   **2.3 Repository Implementation**: Implement `RedisRateLimiterRepository`.
 *   **2.4 Binary Serialization**: Implement `Double` and `Long` binary encoders for Redis Hash fields.
 *   **2.5 Integration Testing (TDD)**: Setup `Testcontainers` (Redis) to verify script atomicity and self-healing (NOSCRIPT).

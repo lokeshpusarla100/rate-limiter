@@ -12,7 +12,7 @@ package com.lokesh.ratelimiter.core.model;
  * <h3>RateLimitResult vs ConsumptionResult</h3>
  * <ul>
  * <li>{@link ConsumptionResult} — domain-internal output of a single
- * {@link TokenBucket#consume} call. Carries the mutated bucket state
+ * {@link TokenBucket #consume} call. Carries the mutated bucket state
  * so it can be persisted. Never leaves the domain layer.</li>
  * <li>{@code RateLimitResult} — this type. Hides all bucket internals
  * and adds caller-friendly fields ({@code reason}, fail-open support,
