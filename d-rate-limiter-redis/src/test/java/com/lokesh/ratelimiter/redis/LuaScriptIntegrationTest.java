@@ -15,7 +15,6 @@ import java.util.List;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.Scanner;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -163,9 +162,7 @@ class LuaScriptIntegrationTest {
             if (is == null) {
                 throw new RuntimeException("Lua script not found on classpath: " + path);
             }
-            try (Scanner scanner = new Scanner(is, StandardCharsets.UTF_8)) {
-                return scanner.useDelimiter("\\A").next();
-            }
+            return new String(is.readAllBytes(), StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new RuntimeException("Failed to load Lua script from classpath: " + path, e);
         }
