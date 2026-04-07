@@ -3,13 +3,11 @@ package com.lokesh.ratelimiter.core.port;
 /**
  * Port: Strategy for resolving a unique rate-limiting key from a request.
  *
- * <p>Architectural Alignment:
- * <ul>
- *   <li><b>ADR 005 (Key Resolvers)</b>: Decouples "Who" is being limited from "How" is limited.
- *       Allows users to provide custom strategies for identifying clients (e.g., by IP, User ID, or API Key).</li>
- * </ul>
+ * Architectural Alignment:
+ *   - ADR 005 (Key Resolvers): Decouples "Who" is being limited from "How" is limited.
+ *       Allows users to provide custom strategies for identifying clients (e.g., by IP, User ID, or API Key).
  * 
- * <p><b>Concurrency Contract [Fix 12]</b>: Implementations MUST be thread-safe.
+ * Concurrency Contract [Fix 12]: Implementations MUST be thread-safe.
  * Resolvers are stateless or immutable by design to handle high concurrency.
  */
 @FunctionalInterface

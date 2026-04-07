@@ -3,21 +3,19 @@ package com.lokesh.ratelimiter.core.model;
 /**
  * Internal result of a <strong>single</strong> token-bucket consume attempt.
  *
- * <p>
+ *
  * This record is used exclusively within the domain layer by
  * {@link TokenBucket#consume} to return both the allow/deny decision and
  * the <em>mutated bucket state</em> so the caller can persist it.
  * It is never exposed to external callers.
  *
  * <h3>ConsumptionResult vs RateLimitResult</h3>
- * <ul>
- * <li>{@code ConsumptionResult} — raw output of one bucket's math
- * (carries the updated {@link TokenBucket}).</li>
- * <li>{@link RateLimitResult} — public-facing response returned by
+ * - {@code ConsumptionResult} — raw output of one bucket's math
+ * (carries the updated {@link TokenBucket}).
+ * - {@link RateLimitResult} — public-facing response returned by
  * {@code DefaultRateLimiter.tryConsume()}, aggregated across all
  * evaluated limits, with a human/machine-friendly reason and
- * fail-open support. It never exposes internal bucket state.</li>
- * </ul>
+ * fail-open support. It never exposes internal bucket state.
  *
  * @param allowed       {@code true} if this bucket had enough tokens for the
  *                      request.

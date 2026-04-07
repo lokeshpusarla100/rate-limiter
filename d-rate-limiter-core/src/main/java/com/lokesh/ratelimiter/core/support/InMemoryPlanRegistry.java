@@ -11,21 +11,19 @@ import java.util.concurrent.ConcurrentHashMap;
  * A simple in-memory implementation of the
  * {@link com.lokesh.ratelimiter.core.port.PlanRegistry}.
  * 
- * <p>
- * Architectural Role: <b>Standard Support Implementation</b>.
+ *
+ * Standard Support Implementation.
  * This registry is suitable for local development, unit testing, or
  * applications
  * with static rate-limiting rules defined at startup.
  * 
- * <p>
+ *
  * Implementation Details:
- * <ul>
- * <li><b>Thread Safety</b>: Uses a
+ * - Thread Safety: Uses a
  * {@link java.util.concurrent.ConcurrentHashMap}
- * to ensure thread-safe registration and lookup.</li>
- * <li><b>Gap 9 Resolution</b>: Provided in the Core to reduce developer
- * friction.</li>
- * </ul>
+ * to ensure thread-safe registration and lookup.
+ * - Gap 9 Resolution: Provided in the Core to reduce developer
+ * friction.
  */
 public class InMemoryPlanRegistry implements PlanRegistry {
 

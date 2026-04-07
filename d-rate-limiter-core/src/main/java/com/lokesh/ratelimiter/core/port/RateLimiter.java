@@ -6,12 +6,10 @@ import java.util.List;
 /**
  * Driving Port (Inbound): The primary service interface for performing rate limit checks.
  *
- * <p>Architectural Alignment:
- * <ul>
- *   <li><b>ADR 001 (Hexagonal)</b>: This is the primary inbound port for the Core Hexagon.</li>
- *   <li><b>ADR 005 (Orchestration)</b>: Supports atomic checks against multiple plans
- *       to prevent partial token leaks.</li>
- * </ul>
+ * Architectural Alignment:
+ *   - ADR 001 (Hexagonal): This is the primary inbound port for the Core Hexagon.
+ *   - ADR 005 (Orchestration): Supports atomic checks against multiple plans
+ *       to prevent partial token leaks.
  */
 public interface RateLimiter {
 

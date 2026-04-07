@@ -3,21 +3,19 @@ package com.lokesh.ratelimiter.core.model;
 /**
  * Public-facing result returned by a rate-limit check.
  *
- * <p>
+ *
  * This is the <strong>only</strong> type that external callers (controllers,
  * filters, API gateways) should interact with. It provides the final
  * allow/deny decision — potentially aggregated across multiple chained
  * limits — along with metadata useful for HTTP headers, logs, and metrics.
  *
  * <h3>RateLimitResult vs ConsumptionResult</h3>
- * <ul>
- * <li>{@link ConsumptionResult} — domain-internal output of a single
+ * - {@link ConsumptionResult} — domain-internal output of a single
  * {@link TokenBucket #consume} call. Carries the mutated bucket state
- * so it can be persisted. Never leaves the domain layer.</li>
- * <li>{@code RateLimitResult} — this type. Hides all bucket internals
+ * so it can be persisted. Never leaves the domain layer.
+ * - {@code RateLimitResult} — this type. Hides all bucket internals
  * and adds caller-friendly fields ({@code reason}, fail-open support,
- * minimum remaining tokens across all limits).</li>
- * </ul>
+ * minimum remaining tokens across all limits).
  *
  * @param allowed         {@code true} if the request passed all evaluated
  *                        limits.
@@ -59,7 +57,7 @@ public record RateLimitResult(
     /**
      * Creates a fail-open result.
      *
-     * <p>
+     *
      * Fail-open means the request is allowed because the limiter could not
      * evaluate safely due to an infrastructure error.
      *

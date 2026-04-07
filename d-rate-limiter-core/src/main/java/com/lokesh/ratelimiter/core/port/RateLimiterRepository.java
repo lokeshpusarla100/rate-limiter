@@ -10,21 +10,19 @@ import java.util.Optional;
 /**
  * Driven Port (Outbound): Repository interface for persisting and retrieving rate limit state.
  * 
- * <p>Architectural Alignment:
- * <ul>
- *   <li><b>ADR 001 (Hexagonal)</b>: Decouples domain logic from infrastructure (Redis, Memory).</li>
- *   <li><b>ADR 004 (Atomic Operations)</b>: Implementations must guarantee that the 
- *       check-and-decrement cycle is atomic (e.g., via Lua scripts).</li>
- *   <li><b>ADR 007 (Time Source)</b>: Implementations are responsible for sourcing 
- *       consistent time (e.g., {@code redis.call('TIME')}).</li>
- * </ul>
+ * Architectural Alignment:
+ *   - ADR 001 (Hexagonal): Decouples domain logic from infrastructure (Redis, Memory).
+ *   - ADR 004 (Atomic Operations): Implementations must guarantee that the 
+ *       check-and-decrement cycle is atomic (e.g., via Lua scripts).
+ *   - ADR 007 (Time Source): Implementations are responsible for sourcing 
+ *       consistent time (e.g., {@code redis.call('TIME')}).
  */
 public interface RateLimiterRepository {
 
     /**
      * Executes an atomic check-and-refill operation against multiple configurations.
      *
-     * <p><b>[Fix 5] Timeout Contract</b>: Implementations MUST complete within 100ms 
+     * [Fix 5] Timeout Contract: Implementations MUST complete within 100ms 
      * or throw a {@link java.util.concurrent.TimeoutException}. This ensures that the 
      * rate limiter does not become a bottleneck or cause thread exhaustion in 
      * the calling application.

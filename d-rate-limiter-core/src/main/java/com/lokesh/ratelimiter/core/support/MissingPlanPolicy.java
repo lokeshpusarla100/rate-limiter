@@ -4,7 +4,7 @@ package com.lokesh.ratelimiter.core.support;
  * Policy defining how the system reacts when a requested rate-limit plan name 
  * cannot be resolved to a concrete configuration.
  * 
- * <p>Architectural Role: <b>Security Configuration</b>. [Fix 2]
+ * Security Configuration [Fix 2].
  */
 public enum MissingPlanPolicy {
     /** 

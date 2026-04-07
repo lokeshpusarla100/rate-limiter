@@ -6,14 +6,12 @@ import java.util.Optional;
 /**
  * Port: Registry for managing and retrieving rate limit plans (Policies).
  *
- * <p>Architectural Alignment:
- * <ul>
- *   <li><b>ADR 005 (Hybrid Configuration)</b>: Decouples the "Binding" (Annotation)
+ * Architectural Alignment:
+ *   - ADR 005 (Hybrid Configuration): Decouples the "Binding" (Annotation)
  *       from the "Rule" (Config). This allows for centralized management and 
- *       dynamic updates of limits (e.g., via Redis or YAML).</li>
- * </ul>
+ *       dynamic updates of limits (e.g., via Redis or YAML).
  * 
- * <p><b>Concurrency Contract [Fix 12]</b>: Implementations MUST be thread-safe.
+ * Concurrency Contract [Fix 12]: Implementations MUST be thread-safe.
  * This registry will be accessed concurrently by multiple request threads.
  * Any internal state updates must be synchronized.
  */

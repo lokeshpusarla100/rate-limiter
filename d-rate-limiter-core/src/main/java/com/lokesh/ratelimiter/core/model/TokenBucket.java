@@ -2,28 +2,16 @@ package com.lokesh.ratelimiter.core.model;
 
 /**
  * Represents the state of a token bucket at a specific point in time.
- * 
- * <p>
- * Architectural Role: <b>State Entity</b>.
- * This record maps directly to the distributed state stored in Redis (ADR 004).
- * It is immutable; refill operations return a new instance rather than mutating
- * state.
+ * State Entity mapping directly to the distributed state stored in Redis (ADR 004).
+ * It is immutable; refill operations return a new instance rather than mutating state.
  *
- * <p>
  * Implementation Details:
- * <ul>
- * <li><b>Epoch Consistency (ADR 007)</b>: Uses Epoch Milliseconds
- * (System.currentTimeMillis)
- * rather than nanoseconds to ensure coordinates are consistent across
- * distributed app instances.</li>
- * <li><b>Precision [Fix 9]</b>: Token counts are stored as doubles. This
- * provides sufficient
- * accuracy for rate limiting (error < 0.0001 tokens) but is not intended for
- * financial accounting.</li>
- * <li><b>Clock Skew [Fix 10]</b>: If {@code currentMillis <= lastRefillMillis},
- * the bucket state
- * is returned unchanged. This protects against backwards clock movement.</li>
- * </ul>
+ * - Epoch Consistency (ADR 007): Uses Epoch Milliseconds (System.currentTimeMillis)
+ *   rather than nanoseconds to ensure coordinates are consistent across distributed app instances.
+ * - Precision [Fix 9]: Token counts are stored as doubles. This provides sufficient
+ *   accuracy for rate limiting (error < 0.0001 tokens) but is not intended for financial accounting.
+ * - Clock Skew [Fix 10]: If {@code currentMillis <= lastRefillMillis}, the bucket state
+ *   is returned unchanged. This protects against backwards clock movement.
  * 
  * @param tokens           Current fractional token count.
  * @param lastRefillMillis Timestamp of the last successful update in epoch
@@ -35,8 +23,8 @@ public record TokenBucket(double tokens, long lastRefillMillis) {
      * Attempts to consume tokens after refilling the bucket based on the current
      * time.
      * 
-     * <p>
-     * <b>[Fix 6] Domain-Driven Logic</b>: This method encapsulates both the refill
+     *
+     * [Fix 6] Domain-Driven Logic: This method encapsulates both the refill
      * and consumption logic, ensuring consistency between Java and Lua
      * implementations.
      *
@@ -63,19 +51,19 @@ public record TokenBucket(double tokens, long lastRefillMillis) {
     /**
      * Refills the bucket based on elapsed time since the last refill.
      *
-     * <p>
-     * <b>Formula</b>:
+     *
+     * Formula:
      * {@code newTokens = min(capacity, currentTokens + elapsed_seconds × rate)}.
      *
-     * <p>
-     * <b>Clock-Skew Guard (ADR 007)</b>: If
+     *
+     * Clock-Skew Guard (ADR 007): If
      * {@code currentMillis <= lastRefillMillis}
      * (clock moved backwards or no time elapsed), the bucket is returned unchanged.
      * In production the time source is Redis ({@code redis.call('TIME')}), so this
      * guard is a safety net, not a common path.
      *
-     * <p>
-     * This method is <b>pure</b> — it returns a new {@code TokenBucket} and never
+     *
+     * This method is pure — it returns a new {@code TokenBucket} and never
      * mutates {@code this}.
      *
      * @param currentMillis The current time in epoch milliseconds.

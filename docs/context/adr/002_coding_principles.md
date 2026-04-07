@@ -32,7 +32,12 @@ We will adhere to a strict set of Engineering Principles tailored for **High-Rel
     *   *Why*: Infrastructure (Redis) *will* fail.
     *   *How*: Critical IO paths must have `try-catch` blocks. If Redis times out, the library defaults to `ALLOW` (Fail Open) and logs the error, ensuring we never block the user's business traffic due to our infra issues.
 
-### 3. Library Specific Constraints
+### 3. Rich Domain Model over Anemic Domain
+*   **Where**: Domain Entities (`TokenBucket`, `RateLimitConfig`).
+*   **Why**: If `tryConsume` math lives in `DefaultRateLimiter`, any future service or adapter needing to check limits has to duplicate that math.
+*   **How**: Entities are not just data holders (getters/setters). They encapsulate the core business rules. `TokenBucket.tryConsume()` calculates wait times and returns a new immutable state. The Service layer (`DefaultRateLimiter`) acts purely as an **Orchestrator**—it fetches the entity from the DB, tells the entity to perform its logic, and saves the result back.
+
+### 4. Library Specific Constraints
 *   **Zero Transitive Dependencies**:
     *   *Why*: Avoid "Dependency Hell" for the consumer.
     *   *How*: We will use standard Java features (Records, Optional) instead of utility libraries (Lombok, Apache Commons) wherever possible.

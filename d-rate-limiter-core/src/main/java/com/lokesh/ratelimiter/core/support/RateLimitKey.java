@@ -3,11 +3,11 @@ package com.lokesh.ratelimiter.core.support;
 /**
  * Standardized utility for generating Redis keys for rate limiting.
  * 
- * <p>
- * Architectural Role: <b>Standardization Support</b>. [Fix 8]
+ *
+ * Standardization Support [Fix 8].
  * Follows the format: {@code ratelimiter:{tenant}:{user}:{plan}}
  * 
- * <p>
+ *
  * Standardization prevents key collisions in distributed environments and
  * simplifies monitoring and debugging.
  */
@@ -34,8 +34,8 @@ public class RateLimitKey {
     /**
      * Generates the final Redis key string.
      *
-     * <p>
-     * <b>Format</b>: {@code ratelimiter:{tenant}:{user}:{plan}}.<br>
+     *
+     * Format: {@code ratelimiter:{tenant}:{user}:{plan}}.
      * Missing segments default to {@code "default"}, {@code "anonymous"},
      * and {@code "global"} respectively.
      *

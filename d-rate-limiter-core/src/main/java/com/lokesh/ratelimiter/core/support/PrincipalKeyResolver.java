@@ -6,14 +6,12 @@ import com.lokesh.ratelimiter.core.port.RequestSource;
 /**
  * Strategy for resolving a rate-limiting key based on the authenticated principal.
  * 
- * <p>Architectural Role: <b>Key Resolution Strategy</b>.
+ * Key Resolution Strategy.
  * Used for per-user rate limiting in authenticated environments.
  * 
- * <p>Implementation Details:
- * <ul>
- *   <li><b>Anonymous Fallback</b>: If no principal is found, it defaults to 
- *       "anonymous" to ensure a consistent key.</li>
- * </ul>
+ * Implementation Details:
+ *   - Anonymous Fallback: If no principal is found, it defaults to 
+ *       "anonymous" to ensure a consistent key.
  */
 public class PrincipalKeyResolver implements KeyResolver {
 

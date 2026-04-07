@@ -19,16 +19,14 @@ import java.util.Optional;
 /**
  * Default implementation of the {@link RateLimiter} port.
  * 
- * <p>
+ *
  * Responsibilities:
- * <ul>
- * <li><b>Orchestration (Gap 8)</b>: Resolves plan names into concrete
- * configurations.</li>
- * <li><b>Resilience (ADR 002)</b>: Implements the Fail-Open principle.</li>
- * <li><b>Observability (Fix 7)</b>: Notifies listeners of all rate-limiting
- * events.</li>
- * <li><b>Security (Fix 2)</b>: Enforces plan resolution policies.</li>
- * </ul>
+ * - Orchestration (Gap 8): Resolves plan names into concrete
+ * configurations.
+ * - Resilience (ADR 002): Implements the Fail-Open principle.
+ * - Observability (Fix 7): Notifies listeners of all rate-limiting
+ * events.
+ * - Security (Fix 2): Enforces plan resolution policies.
  */
 public class DefaultRateLimiter implements RateLimiter {
 

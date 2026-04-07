@@ -6,8 +6,8 @@ import java.util.List;
 /**
  * Outbound Port: Interface for receiving rate-limiting lifecycle events.
  * 
- * <p>
- * Architectural Role: <b>Observability SPI</b>.
+ *
+ * Observability SPI.
  * Implementations of this interface (Adapters) allow the system to export
  * metrics,
  * produce structured logs, or trigger alerts without coupling the Core to
