@@ -9,7 +9,6 @@ import com.lokesh.ratelimiter.core.support.MissingPlanPolicy;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -37,8 +36,17 @@ class DefaultRateLimiterTest {
     @Mock
     private RateLimitEventListener listener;
 
-    @InjectMocks
     private DefaultRateLimiter rateLimiter;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        rateLimiter = new DefaultRateLimiter(
+                repository, 
+                planRegistry, 
+                List.of(listener), 
+                MissingPlanPolicy.FAIL_FAST
+        );
+    }
 
     private final RateLimitConfig config = new RateLimitConfig("gold", 10, 1.0);
     private final String key = "test-user";

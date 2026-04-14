@@ -4,9 +4,7 @@
 --- Purpose: Executes a single token bucket check and consumption operation atomically.
 --- Adheres to: ADR-004 (Redis Strategy), ADR-005 (Configuration), ADR-007 (Time Consistency)
 ---
---- KEYS[1]: bucket_key  - The Redis key for the bucket state (e.g., ratelimiter:default:user_1:gold)
---- KEYS[2]: config_key  - The Redis key for the plan configuration (e.g., config:plan:gold)
---- ARGV[1]: requested   - The number of tokens to consume for this request
+--- igh
 
 local bucket_key = KEYS[1]
 local config_key = KEYS[2]
