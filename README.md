@@ -78,6 +78,9 @@ We maintain a disciplined log of architectural choices and standards:
 
 ## 📊 Performance & Reliability (Verified)
 
+![Load Test Sustained Throughput](./docs/assets/benchmarks/load_test_1.png)
+![Load Test Latency Thresholds](./docs/assets/benchmarks/load_test_2.png)
+
 - **Test Suite**: 38/38 passing tests (Unit & Integration) with 100% coverage of core refill logic.
 - **Latency**: Sub-millisecond local processing; Redis Lua execution optimized via `EVALSHA`.
 - **Concurrency**: Verified atomic multi-plan consumption (Checked 150 concurrent requests: 130 Allowed, 20 Denied - No partial token leaks).

@@ -51,7 +51,6 @@ public class RateLimiterConfig {
     @Bean
     public RedisConfigBootstrapper redisConfigBootstrapper(StatefulRedisConnection<String, String> connection, PlanRegistry planRegistry) {
         RedisConfigBootstrapper bootstrapper = new RedisConfigBootstrapper(connection);
-        
         RateLimitConfig benchmarkPlan = planRegistry.getPlan("benchmark").orElseThrow();
         bootstrapper.bootstrap(List.of(benchmarkPlan));
         
