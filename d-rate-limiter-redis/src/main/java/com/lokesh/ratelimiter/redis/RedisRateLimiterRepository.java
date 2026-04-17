@@ -17,15 +17,8 @@ import java.util.Optional;
 /**
  * Implementation of RateLimiterRepository using Redis and Lua Scripts.
  * 
- * Performance & Atomicity Features:
- * - Atomic Multi-Plan Evaluation: Utilizes a single Lua script to evaluate all chained limits
- *   (e.g., 10/sec and 1000/hour) in one network round-trip, preventing "partial success" scenarios.
- * - EVALSHA Optimization: Pre-calculates and uses script SHA1 hashes to minimize network bandwidth
- *   and avoid the overhead of re-parsing Lua code on every request.
- * - Self-Healing: Automatically falls back to EVAL and re-loads the script if Redis loses its 
- *   script cache (NOSCRIPT error).
- * - Fail-Open Resilience: Propagates Redis exceptions to the core orchestrator, which defaults 
- *   to allowing traffic to ensure system availability during infrastructure outages.
+ * Supports Atomic Multi-Plan evaluation to ensure all rate limits for a 
+ * given request are checked consistently in a single network round-trip.
  */
 public class RedisRateLimiterRepository implements RateLimiterRepository {
 
@@ -76,7 +69,7 @@ public class RedisRateLimiterRepository implements RateLimiterRepository {
         } catch (Exception e) {
             // Fail-Open trigger: Any other Redis exception throws to be caught by DefaultRateLimiter
             throw new RuntimeException("Redis execution failed", e);
-        }
+        } 
 
         return parseResult(result);
     }
