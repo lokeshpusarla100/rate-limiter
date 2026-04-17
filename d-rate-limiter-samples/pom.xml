@@ -17,6 +17,10 @@
     <dependencies>
         <dependency>
             <groupId>com.lokesh.ratelimiter</groupId>
+            <artifactId>d-rate-limiter-redis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.lokesh.ratelimiter</groupId>
             <artifactId>d-rate-limiter-spring-boot-starter</artifactId>
         </dependency>
 

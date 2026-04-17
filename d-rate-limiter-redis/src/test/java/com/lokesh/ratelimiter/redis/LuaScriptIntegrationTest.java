@@ -154,6 +154,74 @@ class LuaScriptIntegrationTest {
         assertThat((Long) result.get(2)).isGreaterThan(0L);
     }
 
+    @Test
+    void shouldAllowMultiPlanAcquisition() {
+        String bucketKey1 = "ratelimiter:test:user_3:gold";
+        String configKey1 = "config:plan:gold";
+        String bucketKey2 = "ratelimiter:test:user_3:daily";
+        String configKey2 = "config:plan:daily";
+
+        connection.sync().hset(configKey1, "capacity", "10.0");
+        connection.sync().hset(configKey1, "refillRate", "1.0");
+        connection.sync().hset(configKey2, "capacity", "100.0");
+        connection.sync().hset(configKey2, "refillRate", "0.1");
+
+        connection.sync().del(bucketKey1, bucketKey2);
+
+        int tokensToConsume = 2;
+        String scriptContent = loadScript("lua/acquire_token.lua");
+
+        List<Object> result = connection.sync().eval(
+            scriptContent,
+            ScriptOutputType.MULTI,
+            new String[]{bucketKey1, configKey1, bucketKey2, configKey2},
+            String.valueOf(tokensToConsume)
+        );
+
+        assertThat(result).hasSize(3);
+        assertThat(result.get(0)).isEqualTo(1L); // Allowed
+        // Min remaining is 10.0 - 2 = 8.0 from gold plan
+        assertThat(((Number) result.get(1)).doubleValue()).isEqualTo(8.0);
+        assertThat(result.get(2)).isEqualTo(0L);
+    }
+
+    @Test
+    void shouldDenyMultiPlanAndPerformNoPartialWrites() {
+        String bucketKey1 = "ratelimiter:test:user_4:gold";
+        String configKey1 = "config:plan:gold";
+        String bucketKey2 = "ratelimiter:test:user_4:daily";
+        String configKey2 = "config:plan:daily";
+
+        connection.sync().hset(configKey1, "capacity", "10.0");
+        connection.sync().hset(configKey1, "refillRate", "1.0");
+        connection.sync().hset(configKey2, "capacity", "100.0");
+        connection.sync().hset(configKey2, "refillRate", "0.1");
+
+        connection.sync().del(bucketKey1, bucketKey2);
+        
+        // Empty the gold bucket so it fails
+        List<String> time = connection.sync().time();
+        long nowMs = (Long.parseLong(time.get(0)) * 1000) + (Long.parseLong(time.get(1)) / 1000);
+        connection.sync().hset(bucketKey1, java.util.Map.of("t", "0.0", "ts", String.valueOf(nowMs)));
+
+        int tokensToConsume = 1;
+        String scriptContent = loadScript("lua/acquire_token.lua");
+
+        List<Object> result = connection.sync().eval(
+            scriptContent,
+            ScriptOutputType.MULTI,
+            new String[]{bucketKey1, configKey1, bucketKey2, configKey2},
+            String.valueOf(tokensToConsume)
+        );
+
+        assertThat(result).hasSize(3);
+        assertThat(result.get(0)).isEqualTo(0L); // Denied
+
+        // Ensure no partial writes occurred (bucket 2 should not exist because it was never successfully consumed from)
+        Boolean exists = connection.sync().exists(bucketKey2) == 1;
+        assertThat(exists).isFalse();
+    }
+
     /**
      * Helper to load Lua script from classpath.
      */
